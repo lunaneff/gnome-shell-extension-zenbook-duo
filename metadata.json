@@ -1,0 +1,9 @@
+{
+  "name": "Asus ZenBook Duo Integration",
+  "description": "Integrate the features of the Asus ZenBook Duo into GNOME",
+  "uuid": "zenbook-duo@laurinneff.ch",
+  "shell-version": [
+    "40"
+  ],
+  "settings-schema": "org.gnome.shell.extensions.zenbook-duo"
+}
