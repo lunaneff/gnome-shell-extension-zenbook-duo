@@ -41,47 +41,47 @@ class Extension {
 
         this._keybindingManager = new Keybindings.Manager();
 
-        this._keybindingManager.add('Launch7', function () {
-            let brightness = this._getBrightness();
-            if (brightness == 0) {
-                let success = this._setBrightness(this._brightnessSlider.value * 254 + 1);
-                if (!success) {
-                    this._showNotification('The Screenpad could not be turned on');
+        this._keybindingManager.add('Launch7', async function () {
+            try {
+                let brightness = await this._getBrightness();
+                if (brightness == 0) {
+                    this._setBrightness(this._brightnessSlider.value * 254 + 1);
+                } else {
+                    this._setBrightness(0);
                 }
-            } else {
-                let success = this._setBrightness(0);
-                if (!success) {
-                    this._showNotification('The Screenpad could not be turned off');
-                }
+            } catch (e) {
+                logError(e);
             }
         }.bind(this));
 
         this._keybindingManager.add('Launch6', function () {
             // TODO: Swap windows
-            this._showNotification('The windows on the Screenpad and main display should be swapped in this function.');
+            this._showNotification('This key is not implemented yet.');
         }.bind(this));
 
         this._keybindingManager.add('<Shift><Super>s', function () {
             // TODO: Take screenshot
-            this._showNotification('A screenshot should be taken in this function.');
+            this._showNotification('This key is not implemented yet.');
         }.bind(this));
 
         this._keybindingManager.add('Tools', function () {
             // TODO: Open application, add configuration
-            this._showNotification('Some application should be opened in this function.');
+            this._showNotification('This key is not implemented yet.');
         }.bind(this));
 
         this._keybindingManager.add('WebCam', function () {
             // TODO: Toggle camera
-            this._showNotification('The camera should be toggled in this function.');
+            this._showNotification('This key is not implemented yet.');
         }.bind(this));
 
         this._brightnessSlider = imports.ui.main.panel.statusArea.aggregateMenu._brightness._slider;
-        this._brightnessListenerId = this._brightnessSlider.connect('notify::value', function () {
-            if (this._getBrightness() == 0) return; // Don't turn Screenpad on when it was turned off
-            let success = this._setBrightness(this._brightnessSlider.value * 254 + 1); // Range from 1 to 255 so the screenpad can't be turned off completely by changing the brightness
-            if (!success) {
-                this._showNotification('The Screenpad brightness could not be changed');
+        this._brightnessListenerId = this._brightnessSlider.connect('notify::value', async function () {
+            try {
+                if (await this._getBrightness() == 0) return; // Don't turn Screenpad on when it was turned off
+
+                await this._setBrightness(this._brightnessSlider.value * 254 + 1); // Range from 1 to 255 so the screenpad can't be turned off completely by changing the brightness
+            } catch (e) {
+                logError(e);
             }
         }.bind(this));
     }
@@ -89,6 +89,7 @@ class Extension {
     disable() {
         this._brightnessSlider.disconnect(this._brightnessListenerId);
         this._keybindingManager.destroy();
+        if (this._notifSource) this._notifSource.destroy();
     }
 
     // Shamelessly stolen from https://github.com/RaphaelRochet/arch-update/blob/3d3f5927ec0d33408a802d6d38af39c1b9b6f8e5/extension.js#L473-L497
@@ -109,19 +110,25 @@ class Extension {
     }
 
     _getBrightness() {
-        let [_, brightness] = this._screenpadBrightnessFile.load_contents(null);
-        return brightness;
+        return new Promise((resolve, reject) => {
+            let [success, brightness] = this._screenpadBrightnessFile.load_contents(null);
+            if (success) resolve(brightness);
+            else reject();
+        });
     }
 
     _setBrightness(brightness) {
-        let [success,] = this._screenpadBrightnessFile.replace_contents(
-            Math.floor(brightness).toString(),
-            null,
-            false,
-            Gio.FileCreateFlags.NONE,
-            null
-        );
-        return success
+        return new Promise((resolve, reject) => {
+            let [success,] = this._screenpadBrightnessFile.replace_contents(
+                Math.floor(brightness).toString(),
+                null,
+                false,
+                Gio.FileCreateFlags.NONE,
+                null
+            );
+            if (success) resolve();
+            else reject();
+        });
     }
 }
 
