@@ -44,7 +44,8 @@ class Extension {
         this._keybindingManager.add('Launch7', async function () {
             try {
                 let brightness = await this._getBrightness();
-                if (brightness == 0) {
+                if (brightness === 0) {
+                    // Range from 1 to 255 so the screenpad can't be turned off completely by changing the brightness
                     this._setBrightness(this._brightnessSlider.value * 254 + 1);
                 } else {
                     this._setBrightness(0);
@@ -77,9 +78,10 @@ class Extension {
         this._brightnessSlider = imports.ui.main.panel.statusArea.aggregateMenu._brightness._slider;
         this._brightnessListenerId = this._brightnessSlider.connect('notify::value', async function () {
             try {
-                if (await this._getBrightness() == 0) return; // Don't turn Screenpad on when it was turned off
+                if (await this._getBrightness() === 0) return; // Don't turn Screenpad on when it was turned off
 
-                await this._setBrightness(this._brightnessSlider.value * 254 + 1); // Range from 1 to 255 so the screenpad can't be turned off completely by changing the brightness
+                // Range from 1 to 255 so the screenpad can't be turned off completely by changing the brightness
+                await this._setBrightness(this._brightnessSlider.value * 254 + 1);
             } catch (e) {
                 logError(e);
             }
@@ -112,7 +114,7 @@ class Extension {
     _getBrightness() {
         return new Promise((resolve, reject) => {
             let [success, brightness] = this._screenpadBrightnessFile.load_contents(null);
-            if (success) resolve(brightness);
+            if (success) resolve(+brightness);
             else reject();
         });
     }
