@@ -44,12 +44,11 @@ class Extension {
         this._keybindingManager.add('Launch7', function () {
             let brightness = this._getBrightness();
             if (brightness == 0) {
-                let success = this._setBrightness(this._brightnessBackup ?? 255);
+                let success = this._setBrightness(this._brightnessSlider.value * 254 + 1);
                 if (!success) {
                     this._showNotification('The Screenpad could not be turned on');
                 }
             } else {
-                this._brightnessBackup = brightness;
                 let success = this._setBrightness(0);
                 if (!success) {
                     this._showNotification('The Screenpad could not be turned off');
@@ -79,6 +78,7 @@ class Extension {
 
         this._brightnessSlider = imports.ui.main.panel.statusArea.aggregateMenu._brightness._slider;
         this._brightnessListenerId = this._brightnessSlider.connect('notify::value', function () {
+            if (this._getBrightness() == 0) return; // Don't turn Screenpad on when it was turned off
             let success = this._setBrightness(this._brightnessSlider.value * 254 + 1); // Range from 1 to 255 so the screenpad can't be turned off completely by changing the brightness
             if (!success) {
                 this._showNotification('The Screenpad brightness could not be changed');
