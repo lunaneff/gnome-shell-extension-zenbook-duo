@@ -79,7 +79,7 @@ class Extension {
 
         this._brightnessSlider = imports.ui.main.panel.statusArea.aggregateMenu._brightness._slider;
         this._brightnessListenerId = this._brightnessSlider.connect('notify::value', function () {
-            let success = this._setBrightness(this._brightnessSlider.value * 255);
+            let success = this._setBrightness(this._brightnessSlider.value * 254 + 1); // Range from 1 to 255 so the screenpad can't be turned off completely by changing the brightness
             if (!success) {
                 this._showNotification('The Screenpad brightness could not be changed');
             }
@@ -115,7 +115,7 @@ class Extension {
 
     _setBrightness(brightness) {
         let [success,] = this._screenpadBrightnessFile.replace_contents(
-            brightness.toString(),
+            Math.floor(brightness).toString(),
             null,
             false,
             Gio.FileCreateFlags.NONE,
