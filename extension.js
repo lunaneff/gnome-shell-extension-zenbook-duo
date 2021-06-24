@@ -12,31 +12,38 @@ const Keybindings = Me.imports.keybindings;
 
 const ScreenpadSysfsPath = '/sys/class/leds/asus::screenpad';
 
+// This variable is kept between enabling/disabling (so that the extension doesn't check if the file exists after unlocking the screen)
+let firstRun = true;
+
 class Extension {
     constructor() {
     }
 
     enable() {
-        this._screenpadBrightnessFile = Gio.File.new_for_path(`${ScreenpadSysfsPath}/brightness`)
-        if (!this._screenpadBrightnessFile.query_exists(null)) {
-            this._showNotification(
-                'The Screenpad brightness file does not exist',
-                'Ensure the asus-wmi-screenpad module is installed and loaded and that your device is compatible with this module.',
-                'Click here to see how to do this',
-                function () {
-                    Gio.AppInfo.launch_default_for_uri_async('https://github.com/Plippo/asus-wmi-screenpad#readme', null, null, null);
-                }
-            );
-        }
-        if (!false) { // TODO: Check if the current user has permission to write to the brightness file
-            this._showNotification(
-                'You do not have permission to set the brightness of the Screenpad+',
-                `The current user does not have write access to the file ${ScreenpadSysfsPath}/brightness.`,
-                'Click here to see how to configure this',
-                function () {
-                    Gio.AppInfo.launch_default_for_uri_async('https://github.com/laurinneff/gnome-shell-extension-zenbook-duo/blob/master/docs/permissions.md', null, null, null);
-                }
-            );
+        if (firstRun) {
+            this._screenpadBrightnessFile = Gio.File.new_for_path(`${ScreenpadSysfsPath}/brightness`)
+            if (!this._screenpadBrightnessFile.query_exists(null)) {
+                this._showNotification(
+                    'The Screenpad brightness file does not exist',
+                    'Ensure the asus-wmi-screenpad module is installed and loaded and that your device is compatible with this module.',
+                    'Click here to see how to do this',
+                    function () {
+                        Gio.AppInfo.launch_default_for_uri_async('https://github.com/Plippo/asus-wmi-screenpad#readme', null, null, null);
+                    }
+                );
+            }
+            if (!false) { // TODO: Check if the current user has permission to write to the brightness file
+                this._showNotification(
+                    'You do not have permission to set the brightness of the Screenpad+',
+                    `The current user does not have write access to the file ${ScreenpadSysfsPath}/brightness.`,
+                    'Click here to see how to configure this',
+                    function () {
+                        Gio.AppInfo.launch_default_for_uri_async('https://github.com/laurinneff/gnome-shell-extension-zenbook-duo/blob/master/docs/permissions.md', null, null, null);
+                    }
+                );
+            }
+
+            firstRun = false;
         }
 
         this._keybindingManager = new Keybindings.Manager();
