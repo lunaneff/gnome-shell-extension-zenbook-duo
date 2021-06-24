@@ -61,8 +61,23 @@ class Extension {
         }.bind(this));
 
         this._keybindingManager.add('<Shift><Super>s', function () {
-            // TODO: Take screenshot
-            this._showNotification('This key is not implemented yet.');
+            try {
+                // The process starts running immediately after this function is called. Any
+                // error thrown here will be a result of the process failing to start, not
+                // the success or failure of the process itself.
+                let proc = Gio.Subprocess.new(
+                    // The program and command options are passed as a list of arguments
+                    ['gnome-screenshot'],
+
+                    // The flags control what I/O pipes are opened and how they are directed
+                    Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
+                );
+
+                // Once the process has started, you can end it with `force_exit()`
+                //proc.force_exit();
+            } catch (e) {
+                logError(e);
+            }
         }.bind(this));
 
         this._keybindingManager.add('Tools', function () {
@@ -114,7 +129,7 @@ class Extension {
     _getBrightness() {
         return new Promise((resolve, reject) => {
             let [success, brightness] = this._screenpadBrightnessFile.load_contents(null);
-            if (success) resolve(+brightness);
+            if (success) resolve(+(imports.byteArray.toString(brightness)));
             else reject();
         });
     }
