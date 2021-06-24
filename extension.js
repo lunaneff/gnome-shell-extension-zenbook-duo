@@ -61,6 +61,8 @@ class Extension {
         }.bind(this));
 
         this._keybindingManager.add('<Shift><Super>s', function () {
+            // https://gjs.guide/guides/gio/subprocesses.html#basic-usage
+
             try {
                 // The process starts running immediately after this function is called. Any
                 // error thrown here will be a result of the process failing to start, not
@@ -72,9 +74,6 @@ class Extension {
                     // The flags control what I/O pipes are opened and how they are directed
                     Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
                 );
-
-                // Once the process has started, you can end it with `force_exit()`
-                //proc.force_exit();
             } catch (e) {
                 logError(e);
             }
