@@ -3,7 +3,7 @@
 ## Temporary
 
 ```shell
-$ sudo chmod a+w /sys/class/leds/asus::screenpad/brightness
+$ sudo chmod a+rw /sys/class/leds/asus::screenpad/brightness
 ```
 
 ## Permanent (requires udev)
@@ -13,7 +13,7 @@ If you don't use udev, add the command from the temporary section to an init scr
 1. Create this file at `/etc/udev/rules.d/99-screenpad.rules`
 
 ```udev
-ACTION=="add", SUBSYSTEM=="leds", KERNEL=="asus::screenpad", RUN+="/bin/chmod a+w /sys/class/leds/%k/brightness"
+ACTION=="add", SUBSYSTEM=="leds", KERNEL=="asus::screenpad", RUN+="/bin/chmod a+rw /sys/class/leds/%k/brightness"
 ```
 
 2. Apply the new udev rule:
