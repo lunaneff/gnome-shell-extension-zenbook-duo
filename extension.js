@@ -36,7 +36,7 @@ class Extension {
                     }
                 );
             } else {
-                this._screenpadBrightnessFileInfo = this._screenpadBrightnessFile.query_info(
+                let screenpadBrightnessFileInfo = this._screenpadBrightnessFile.query_info(
                     'access::*',
                     Gio.FileQueryInfoFlags.NONE,
                     null
@@ -44,8 +44,8 @@ class Extension {
 
                 // Check to make sure we have both read and write permissions
                 if (
-                    !this._screenpadBrightnessFileInfo.get_attribute_boolean(Gio.FILE_ATTRIBUTE_ACCESS_CAN_READ) ||
-                    !this._screenpadBrightnessFileInfo.get_attribute_boolean(Gio.FILE_ATTRIBUTE_ACCESS_CAN_WRITE)
+                    !screenpadBrightnessFileInfo.get_attribute_boolean(Gio.FILE_ATTRIBUTE_ACCESS_CAN_READ) ||
+                    !screenpadBrightnessFileInfo.get_attribute_boolean(Gio.FILE_ATTRIBUTE_ACCESS_CAN_WRITE)
                 ) {
                     this._showNotification(
                         'You do not have permission to set the brightness of the Screenpad+',
