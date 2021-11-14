@@ -16,7 +16,9 @@ const ScreenpadSysfsPath = '/sys/class/leds/asus::screenpad';
 let firstRun = true;
 
 class Extension {
-    constructor() {}
+    constructor() {
+        this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.zenbook-duo');
+    }
 
     enable() {
         if (firstRun) {
@@ -68,6 +70,7 @@ class Extension {
 
         this._keybindingManager = new Keybindings.Manager();
 
+        // Screenpad toggle key
         this._keybindingManager.add(
             'Launch7',
             async function () {
@@ -85,6 +88,7 @@ class Extension {
             }.bind(this)
         );
 
+        // Swap windows key
         this._keybindingManager.add(
             'Launch6',
             function () {
@@ -93,10 +97,30 @@ class Extension {
             }.bind(this)
         );
 
+        // Screenshot key
         this._keybindingManager.add(
             '<Shift><Super>s',
             function () {
-                // https://gjs.guide/guides/gio/subprocesses.html#basic-usage
+                let args;
+
+                switch (this.settings.get_string('screenshot-type')) {
+                    case 'Screen':
+                        args = []; // gnome-screenshot without args will take a screenshot of the whole screen
+                        break;
+                    case 'Window':
+                        args = ['--window'];
+                        break;
+                    case 'Selection':
+                        args = ['--area'];
+                        break;
+                    case 'Interactive':
+                        args = ['--interactive'];
+                        break;
+                }
+
+                if (this.settings.get_boolean('screenshot-include-cursor')) {
+                    args.push('--include-pointer');
+                }
 
                 try {
                     // The process starts running immediately after this function is called. Any
@@ -104,7 +128,7 @@ class Extension {
                     // the success or failure of the process itself.
                     let proc = Gio.Subprocess.new(
                         // The program and command options are passed as a list of arguments
-                        ['gnome-screenshot'],
+                        ['gnome-screenshot', ...args],
 
                         // The flags control what I/O pipes are opened and how they are directed
                         Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
@@ -115,14 +139,28 @@ class Extension {
             }.bind(this)
         );
 
+        // MyASUS key
         this._keybindingManager.add(
             'Tools',
             function () {
-                // TODO: Open application, add configuration
-                this._showNotification('This key is not implemented yet.');
+                try {
+                    // The process starts running immediately after this function is called. Any
+                    // error thrown here will be a result of the process failing to start, not
+                    // the success or failure of the process itself.
+                    let proc = Gio.Subprocess.new(
+                        // The program and command options are passed as a list of arguments
+                        ['sh', '-c', this.settings.get_string('myasus-cmd')],
+
+                        // The flags control what I/O pipes are opened and how they are directed
+                        Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
+                    );
+                } catch (e) {
+                    logError(e);
+                }
             }.bind(this)
         );
 
+        // Toggle webcam key
         this._keybindingManager.add(
             'WebCam',
             function () {

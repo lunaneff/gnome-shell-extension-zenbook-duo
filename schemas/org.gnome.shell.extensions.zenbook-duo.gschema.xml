@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+    <enum id="org.gnome.shell.extensions.zenbook-duo.screenshot-type">
+        <value nick="Screen" value="1" />
+        <value nick="Window" value="2" />
+        <value nick="Selection" value="3" />
+        <value nick="Interactive" value="4" />
+    </enum>
+    <schema id="org.gnome.shell.extensions.zenbook-duo" path="/org/gnome/shell/extensions/zenbook-duo/">
+        <key name="myasus-cmd" type="s">
+            <default>''</default>
+            <summary>Command to run when the MyASUS key is pressed</summary>
+        </key>
+        <key name="screenshot-type" enum="org.gnome.shell.extensions.zenbook-duo.screenshot-type">
+            <default>'Interactive'</default>
+            <summary>Type of screenshot to take</summary>
+        </key>
+        <key name="screenshot-include-cursor" type="b">
+            <default>false</default>
+            <summary>Whether the cursor should be included in screenshots</summary>
+        </key>
+    </schema>
+</schemalist>
