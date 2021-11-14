@@ -35,16 +35,32 @@ class Extension {
                         );
                     }
                 );
-            }
-            if (!false) { // TODO: Check if the current user has permission to write to the brightness file
-                this._showNotification(
-                    'You do not have permission to set the brightness of the Screenpad+',
-                    `The current user does not have write access to the file ${ScreenpadSysfsPath}/brightness.`,
-                    'Click here to see how to configure this',
-                    function () {
-                        Gio.AppInfo.launch_default_for_uri_async('https://github.com/laurinneff/gnome-shell-extension-zenbook-duo/blob/master/docs/permissions.md', null, null, null);
-                    }
+            } else {
+                this._screenpadBrightnessFileInfo = this._screenpadBrightnessFile.query_info(
+                    'access::*',
+                    Gio.FileQueryInfoFlags.NONE,
+                    null
                 );
+
+                // Check to make sure we have both read and write permissions
+                if (
+                    !this._screenpadBrightnessFileInfo.get_attribute_boolean(Gio.FILE_ATTRIBUTE_ACCESS_CAN_READ) ||
+                    !this._screenpadBrightnessFileInfo.get_attribute_boolean(Gio.FILE_ATTRIBUTE_ACCESS_CAN_WRITE)
+                ) {
+                    this._showNotification(
+                        'You do not have permission to set the brightness of the Screenpad+',
+                        `The current user does not have write access to the file ${ScreenpadSysfsPath}/brightness.`,
+                        'Click here to see how to configure this',
+                        function () {
+                            Gio.AppInfo.launch_default_for_uri_async(
+                                'https://github.com/laurinneff/gnome-shell-extension-zenbook-duo/blob/master/docs/permissions.md',
+                                null,
+                                null,
+                                null
+                            );
+                        }
+                    );
+                }
             }
 
             firstRun = false;
