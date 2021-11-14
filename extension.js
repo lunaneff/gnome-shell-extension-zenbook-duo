@@ -16,31 +16,51 @@ const ScreenpadSysfsPath = '/sys/class/leds/asus::screenpad';
 let firstRun = true;
 
 class Extension {
-    constructor() {
-    }
+    constructor() {}
 
     enable() {
         if (firstRun) {
-            this._screenpadBrightnessFile = Gio.File.new_for_path(`${ScreenpadSysfsPath}/brightness`)
+            this._screenpadBrightnessFile = Gio.File.new_for_path(`${ScreenpadSysfsPath}/brightness`);
             if (!this._screenpadBrightnessFile.query_exists(null)) {
                 this._showNotification(
                     'The Screenpad brightness file does not exist',
                     'Ensure the asus-wmi-screenpad module is installed and loaded and that your device is compatible with this module.',
                     'Click here to see how to do this',
                     function () {
-                        Gio.AppInfo.launch_default_for_uri_async('https://github.com/Plippo/asus-wmi-screenpad#readme', null, null, null);
+                        Gio.AppInfo.launch_default_for_uri_async(
+                            'https://github.com/Plippo/asus-wmi-screenpad#readme',
+                            null,
+                            null,
+                            null
+                        );
                     }
                 );
-            }
-            if (!false) { // TODO: Check if the current user has permission to write to the brightness file
-                this._showNotification(
-                    'You do not have permission to set the brightness of the Screenpad+',
-                    `The current user does not have write access to the file ${ScreenpadSysfsPath}/brightness.`,
-                    'Click here to see how to configure this',
-                    function () {
-                        Gio.AppInfo.launch_default_for_uri_async('https://github.com/laurinneff/gnome-shell-extension-zenbook-duo/blob/master/docs/permissions.md', null, null, null);
-                    }
+            } else {
+                let screenpadBrightnessFileInfo = this._screenpadBrightnessFile.query_info(
+                    'access::*',
+                    Gio.FileQueryInfoFlags.NONE,
+                    null
                 );
+
+                // Check to make sure we have both read and write permissions
+                if (
+                    !screenpadBrightnessFileInfo.get_attribute_boolean(Gio.FILE_ATTRIBUTE_ACCESS_CAN_READ) ||
+                    !screenpadBrightnessFileInfo.get_attribute_boolean(Gio.FILE_ATTRIBUTE_ACCESS_CAN_WRITE)
+                ) {
+                    this._showNotification(
+                        'You do not have permission to set the brightness of the Screenpad+',
+                        `The current user does not have write access to the file ${ScreenpadSysfsPath}/brightness.`,
+                        'Click here to see how to configure this',
+                        function () {
+                            Gio.AppInfo.launch_default_for_uri_async(
+                                'https://github.com/laurinneff/gnome-shell-extension-zenbook-duo/blob/master/docs/permissions.md',
+                                null,
+                                null,
+                                null
+                            );
+                        }
+                    );
+                }
             }
 
             firstRun = false;
@@ -48,65 +68,83 @@ class Extension {
 
         this._keybindingManager = new Keybindings.Manager();
 
-        this._keybindingManager.add('Launch7', async function () {
-            try {
-                let brightness = await this._getBrightness();
-                if (brightness === 0) {
-                    // Range from 1 to 255 so the screenpad can't be turned off completely by changing the brightness
-                    this._setBrightness(this._brightnessSlider.value * 254 + 1);
-                } else {
-                    this._setBrightness(0);
+        this._keybindingManager.add(
+            'Launch7',
+            async function () {
+                try {
+                    let brightness = await this._getBrightness();
+                    if (brightness === 0) {
+                        // Range from 1 to 255 so the screenpad can't be turned off completely by changing the brightness
+                        this._setBrightness(this._brightnessSlider.value * 254 + 1);
+                    } else {
+                        this._setBrightness(0);
+                    }
+                } catch (e) {
+                    logError(e);
                 }
-            } catch (e) {
-                logError(e);
-            }
-        }.bind(this));
+            }.bind(this)
+        );
 
-        this._keybindingManager.add('Launch6', function () {
-            // TODO: Swap windows
-            this._showNotification('This key is not implemented yet.');
-        }.bind(this));
+        this._keybindingManager.add(
+            'Launch6',
+            function () {
+                // TODO: Swap windows
+                this._showNotification('This key is not implemented yet.');
+            }.bind(this)
+        );
 
-        this._keybindingManager.add('<Shift><Super>s', function () {
-            // https://gjs.guide/guides/gio/subprocesses.html#basic-usage
+        this._keybindingManager.add(
+            '<Shift><Super>s',
+            function () {
+                // https://gjs.guide/guides/gio/subprocesses.html#basic-usage
 
-            try {
-                // The process starts running immediately after this function is called. Any
-                // error thrown here will be a result of the process failing to start, not
-                // the success or failure of the process itself.
-                let proc = Gio.Subprocess.new(
-                    // The program and command options are passed as a list of arguments
-                    ['gnome-screenshot'],
+                try {
+                    // The process starts running immediately after this function is called. Any
+                    // error thrown here will be a result of the process failing to start, not
+                    // the success or failure of the process itself.
+                    let proc = Gio.Subprocess.new(
+                        // The program and command options are passed as a list of arguments
+                        ['gnome-screenshot'],
 
-                    // The flags control what I/O pipes are opened and how they are directed
-                    Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
-                );
-            } catch (e) {
-                logError(e);
-            }
-        }.bind(this));
+                        // The flags control what I/O pipes are opened and how they are directed
+                        Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
+                    );
+                } catch (e) {
+                    logError(e);
+                }
+            }.bind(this)
+        );
 
-        this._keybindingManager.add('Tools', function () {
-            // TODO: Open application, add configuration
-            this._showNotification('This key is not implemented yet.');
-        }.bind(this));
+        this._keybindingManager.add(
+            'Tools',
+            function () {
+                // TODO: Open application, add configuration
+                this._showNotification('This key is not implemented yet.');
+            }.bind(this)
+        );
 
-        this._keybindingManager.add('WebCam', function () {
-            // TODO: Toggle camera
-            this._showNotification('This key is not implemented yet.');
-        }.bind(this));
+        this._keybindingManager.add(
+            'WebCam',
+            function () {
+                // TODO: Toggle camera
+                this._showNotification('This key is not implemented yet.');
+            }.bind(this)
+        );
 
         this._brightnessSlider = imports.ui.main.panel.statusArea.aggregateMenu._brightness._slider;
-        this._brightnessListenerId = this._brightnessSlider.connect('notify::value', async function () {
-            try {
-                if (await this._getBrightness() === 0) return; // Don't turn Screenpad on when it was turned off
+        this._brightnessListenerId = this._brightnessSlider.connect(
+            'notify::value',
+            async function () {
+                try {
+                    if ((await this._getBrightness()) === 0) return; // Don't turn Screenpad on when it was turned off
 
-                // Range from 1 to 255 so the screenpad can't be turned off completely by changing the brightness
-                await this._setBrightness(this._brightnessSlider.value * 254 + 1);
-            } catch (e) {
-                logError(e);
-            }
-        }.bind(this));
+                    // Range from 1 to 255 so the screenpad can't be turned off completely by changing the brightness
+                    await this._setBrightness(this._brightnessSlider.value * 254 + 1);
+                } catch (e) {
+                    logError(e);
+                }
+            }.bind(this)
+        );
     }
 
     disable() {
@@ -121,13 +159,17 @@ class Extension {
             // We have to prepare this only once
             this._notifSource = new MessageTray.SystemNotificationSource();
             // Take care of note leaving unneeded sources
-            this._notifSource.connect('destroy', Lang.bind(this, function () { this._notifSource = null; }));
+            this._notifSource.connect(
+                'destroy',
+                Lang.bind(this, function () {
+                    this._notifSource = null;
+                })
+            );
             Main.messageTray.add(this._notifSource);
         }
         let notification = null;
         notification = new MessageTray.Notification(this._notifSource, title, message);
-        if (btnText)
-            notification.addAction(btnText, Lang.bind(this, btnAction));
+        if (btnText) notification.addAction(btnText, Lang.bind(this, btnAction));
         notification.setTransient(true);
         this._notifSource.showNotification(notification);
     }
@@ -135,14 +177,14 @@ class Extension {
     _getBrightness() {
         return new Promise((resolve, reject) => {
             let [success, brightness] = this._screenpadBrightnessFile.load_contents(null);
-            if (success) resolve(+(imports.byteArray.toString(brightness)));
+            if (success) resolve(+imports.byteArray.toString(brightness));
             else reject();
         });
     }
 
     _setBrightness(brightness) {
         return new Promise((resolve, reject) => {
-            let [success,] = this._screenpadBrightnessFile.replace_contents(
+            let [success] = this._screenpadBrightnessFile.replace_contents(
                 Math.floor(brightness).toString(),
                 null,
                 false,
