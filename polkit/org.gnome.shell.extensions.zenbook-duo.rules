@@ -1,0 +1,15 @@
+// VERSION: 2
+
+// Taken from https://github.com/deinstapel/cpupower/blob/8070436b5fa436b580c4a0cfecf58cd53e03f96c/data/10-mko.cpupower.setcpufreq.rules
+polkit.addRule(function (action, subject) {
+    var idx = action.id.lastIndexOf('.');
+    var username_stripped = action.id.substring(0, idx);
+    var username = action.id.substring(idx + 1);
+    if (username_stripped === 'org.gnome.shell.extensions.zenbook-duo.brightness') {
+        if (subject.user === username) {
+            return polkit.Result.YES;
+        } else {
+            return polkit.Result.NO;
+        }
+    }
+});

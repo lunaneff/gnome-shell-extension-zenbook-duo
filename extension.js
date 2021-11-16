@@ -8,7 +8,9 @@ const MessageTray = imports.ui.messageTray;
 const Lang = imports.lang;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
+
 const Keybindings = Me.imports.keybindings;
+const utils = Me.imports.utils;
 
 const ScreenpadSysfsPath = '/sys/class/leds/asus::screenpad';
 
@@ -38,31 +40,75 @@ class Extension {
                     }
                 );
             } else {
-                let screenpadBrightnessFileInfo = this._screenpadBrightnessFile.query_info(
-                    'access::*',
-                    Gio.FileQueryInfoFlags.NONE,
-                    null
-                );
-
-                // Check to make sure we have both read and write permissions
-                if (
-                    !screenpadBrightnessFileInfo.get_attribute_boolean(Gio.FILE_ATTRIBUTE_ACCESS_CAN_READ) ||
-                    !screenpadBrightnessFileInfo.get_attribute_boolean(Gio.FILE_ATTRIBUTE_ACCESS_CAN_WRITE)
-                ) {
-                    this._showNotification(
-                        'You do not have permission to set the brightness of the Screenpad+',
-                        `The current user does not have write access to the file ${ScreenpadSysfsPath}/brightness.`,
-                        'Click here to see how to configure this',
-                        function () {
-                            Gio.AppInfo.launch_default_for_uri_async(
-                                'https://github.com/laurinneff/gnome-shell-extension-zenbook-duo/blob/master/docs/permissions.md',
-                                null,
-                                null,
-                                null
+                utils.checkInstalled().then((result) => {
+                    switch (result) {
+                        case utils.EXIT_SUCCESS:
+                            // Only check for the udev rule if the additional files are installed
+                            const udevRuleFile = Gio.File.new_for_path('/etc/udev/rules.d/99-screenpad.rules');
+                            if (udevRuleFile.query_exists(null)) {
+                                this._showNotification(
+                                    'You still have the old udev rule on your system',
+                                    "This rule was previously used to get write access on the brightness file, but it isn't needed anymore.",
+                                    'Click here to see how to remove it',
+                                    function () {
+                                        Gio.AppInfo.launch_default_for_uri_async(
+                                            'https://github.com/laurinneff/gnome-shell-extension-zenbook-duo/blob/master/docs/permissions.md#removing-the-old-udev-rule',
+                                            null,
+                                            null,
+                                            null
+                                        );
+                                    }
+                                );
+                            }
+                            break;
+                        case utils.EXIT_NOT_INSTALLED:
+                            this._showNotification(
+                                'This extension requires additional configuration',
+                                "In order for this extension to work, it needs to install some files. You can undo this in the extension's settings.",
+                                'Click here to do this automatically',
+                                async function () {
+                                    switch (await utils.install()) {
+                                        case utils.EXIT_SUCCESS:
+                                            this._showNotification(
+                                                'Successfully installed files',
+                                                'The files have been installed successfully. You can now use the extension.'
+                                            );
+                                            break;
+                                        case utils.EXIT_FAILURE:
+                                            this._showNotification(
+                                                'Failed to install the files',
+                                                'The files could not be installed.'
+                                            );
+                                            break;
+                                    }
+                                }
                             );
-                        }
-                    );
-                }
+                            break;
+                        case utils.EXIT_NEEDS_UPDATE:
+                            this._showNotification(
+                                'The additional files for the Screenpad+ extension requires an update',
+                                'The extension has been updated, but the additional files need to be updated separately.',
+                                'Click here to do this automatically',
+                                async function () {
+                                    switch (await utils.install()) {
+                                        case utils.EXIT_SUCCESS:
+                                            this._showNotification(
+                                                'Successfully updated files',
+                                                'The files have been files successfully. You can now use the extension.'
+                                            );
+                                            break;
+                                        case utils.EXIT_FAILURE:
+                                            this._showNotification(
+                                                'Failed to update the files',
+                                                'The files could not be updated.'
+                                            );
+                                            break;
+                                    }
+                                }
+                            );
+                            break;
+                    }
+                });
             }
 
             firstRun = false;
@@ -183,6 +229,29 @@ class Extension {
                 }
             }.bind(this)
         );
+
+        this.settings.connect(
+            'changed::uninstall',
+            async function () {
+                if (this.settings.get_boolean('uninstall')) {
+                    switch (await utils.uninstall()) {
+                        case utils.EXIT_SUCCESS:
+                            this._showNotification(
+                                'Successfully uninstalled files',
+                                'The files have been uninstalled successfully. You can now remove the extension.'
+                            );
+                            break;
+                        case utils.EXIT_FAILURE:
+                            this._showNotification(
+                                'Failed to uninstall the files',
+                                'The files could not be uninstalled.'
+                            );
+                            break;
+                    }
+                    this.settings.set_boolean('uninstall', false);
+                }
+            }.bind(this)
+        );
     }
 
     disable() {
@@ -212,26 +281,14 @@ class Extension {
         this._notifSource.showNotification(notification);
     }
 
-    _getBrightness() {
-        return new Promise((resolve, reject) => {
-            let [success, brightness] = this._screenpadBrightnessFile.load_contents(null);
-            if (success) resolve(+imports.byteArray.toString(brightness));
-            else reject();
-        });
+    async _getBrightness() {
+        const ret = await utils.runScreenpadTool(false, 'get');
+        return +ret.stdout;
     }
 
-    _setBrightness(brightness) {
-        return new Promise((resolve, reject) => {
-            let [success] = this._screenpadBrightnessFile.replace_contents(
-                Math.floor(brightness).toString(),
-                null,
-                false,
-                Gio.FileCreateFlags.NONE,
-                null
-            );
-            if (success) resolve();
-            else reject();
-        });
+    async _setBrightness(brightness) {
+        const ret = await utils.runScreenpadTool(true, 'set', Math.floor(brightness).toString());
+        return ret.ok;
     }
 }
 

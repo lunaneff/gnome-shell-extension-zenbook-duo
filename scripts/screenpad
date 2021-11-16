@@ -1,0 +1,79 @@
+#!/bin/sh
+
+# shellcheck disable=SC2034  # This is read by the installer to check if this script is up to date
+VERSION=2
+
+EXIT_SUCCESS=0
+EXIT_INVALID_ARGUMENT=1
+EXIT_FAILURE=2
+EXIT_NEEDS_ROOT=5
+
+set -e
+
+usage() {
+    cat << USAGE
+Usage: $0 [OPTIONS] [SUBCOMMAND]
+
+Available options:
+    --help, -h                      Show this help
+    --screenpad-sysfs-path PATH     Path to the sysfs directory of the screenpad (default: /sys/class/leds/asus::screenpad)
+
+Available subcommands:
+    set BRIGHTNESS                  Set the brightness of the screenpad
+    get                             Get the brightness of the screenpad
+USAGE
+
+    exit $EXIT_INVALID_ARGUMENT
+}
+
+SCREENPAD_SYSFS_PATH="/sys/class/leds/asus::screenpad"
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --help|-h)
+            usage
+            ;;
+        --screenpad-sysfs-path)
+            SCREENPAD_SYSFS_PATH="$2"
+            shift 2
+            ;;
+        set)
+            SUBCOMMAND="set"
+            BRIGHTNESS="$2"
+            shift 2
+            ;;
+        get)
+            SUBCOMMAND="get"
+            shift
+            ;;
+        *)
+            echo "Unknown argument: $1"
+            usage
+            ;;
+    esac
+done
+
+if [ -z "$SUBCOMMAND" ]; then
+    echo "No subcommand specified"
+    usage
+fi
+
+if [ ! -d "$SCREENPAD_SYSFS_PATH" ]; then
+    echo "Screenpad sysfs path does not exist"
+    exit $EXIT_INVALID_ARGUMENT
+fi
+
+if [ $SUBCOMMAND = "set" ]; then
+    if [ "$(id -u)" -ne 0 ]; then
+        echo "This script must be run as root"
+        exit $EXIT_NEEDS_ROOT
+    fi
+
+    echo "$BRIGHTNESS" > "$SCREENPAD_SYSFS_PATH/brightness"
+    exit $EXIT_SUCCESS
+fi
+
+if [ $SUBCOMMAND = "get" ]; then
+    cat "$SCREENPAD_SYSFS_PATH/brightness"
+    exit $EXIT_SUCCESS
+fi

@@ -19,5 +19,14 @@
             <default>false</default>
             <summary>Whether the cursor should be included in screenshots</summary>
         </key>
+
+        <key name="uninstall" type="b">
+            <default>false</default>
+            <summary>The additional files are uninstalled when this is set to true</summary>
+            <!--
+                FIXME: I don't know the proper way to send a signal from the settings to the extension to uninstall the files, 
+                so I decided to do it this way. I know it's probably not the best way, but if it works, it works.
+            -->
+        </key>
     </schema>
 </schemalist>

@@ -1,32 +1,17 @@
 # How to set up permissions for this extension
 
-## Temporary
+The extension asks to install additional files required to set the Screenpad brightness when it's enabled. Just click the button, enter your password, and let it install everything.
 
-```shell
-$ sudo chmod a+rw /sys/class/leds/asus::screenpad/brightness
+## Uninstalling the additional files
+
+There's a button in the extension's settings, just click it, enter your password, and all the changes are undone. If you'd instead prefer to do it manually, remove these files:
+
+```
+/usr/local/bin/screenpad-$USER
+/usr/share/polkit-1/actions/org.gnome.shell.extensions.zenbook-duo.$USER.policy
+/usr/share/polkit-1/rules.d/org.gnome.shell.extensions.zenbook-duo.rules
 ```
 
-## Permanent (requires udev)
+## Removing the old udev rule
 
-If you don't use udev, add the command from the temporary section to an init script instead. If you don't know what udev is, you can probably continue following these instructions
-
-1. Create this file at `/etc/udev/rules.d/99-screenpad.rules`
-
-```udev
-ACTION=="add", SUBSYSTEM=="leds", KERNEL=="asus::screenpad", RUN+="/bin/chmod a+rw /sys/class/leds/%k/brightness"
-```
-
-2. Apply the new udev rule:
-
-```shell
-$ sudo udevadm control --reload-rules && sudo udevadm trigger
-```
-
-3. Ensure the permissions are correctly set:
-
-```shell
-$ ls -l /sys/class/leds/asus::screenpad/brightness
--rw-rw-rw- 1 root root 4096 Apr 18 16:32 /sys/class/leds/asus::screenpad/brightness
-```
-
-If the first column is `-rw-rw-rw-`, the permissions are correctly set
+Previously, the extension asked you to add a udev rule that allows every user to set the Screenpad brightness. Now this isn't the case anymore, so it's recommended to remove the rule by deleting the file at `/etc/udev/rules.d/99-screenpad.rules`
