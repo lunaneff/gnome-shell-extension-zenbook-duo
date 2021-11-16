@@ -1,4 +1,4 @@
-VERSION = 1
+VERSION = 2
 
 EXTENSION_INSTALL_DIR = "$(HOME)/.local/share/gnome-shell/extensions/zenbook-duo@laurinneff.ch"
 
