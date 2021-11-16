@@ -5,7 +5,6 @@ const Meta = imports.gi.Meta;
 const Shell = imports.gi.Shell;
 const Main = imports.ui.main;
 const MessageTray = imports.ui.messageTray;
-const Lang = imports.lang;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
@@ -14,16 +13,11 @@ const utils = Me.imports.utils;
 
 const ScreenpadSysfsPath = '/sys/class/leds/asus::screenpad';
 
-// This variable is kept between enabling/disabling (so that the extension doesn't check if the file exists after unlocking the screen)
-let firstRun = true;
-
 class Extension {
-    constructor() {
-        this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.zenbook-duo');
-    }
+    constructor() {}
 
     enable() {
-        if (firstRun) {
+        if (this._firstRun) {
             this._screenpadBrightnessFile = Gio.File.new_for_path(`${ScreenpadSysfsPath}/brightness`);
             if (!this._screenpadBrightnessFile.query_exists(null)) {
                 this._showNotification(
@@ -111,8 +105,14 @@ class Extension {
                 });
             }
 
-            firstRun = false;
+            /*
+                This variable is kept between enabling/disabling (so that the extension doesn't check if the
+                brightness file exists and if the additional files are installed after unlocking the screen)
+            */
+            this._firstRun = false;
         }
+
+        this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.zenbook-duo');
 
         this._keybindingManager = new Keybindings.Manager();
 
@@ -257,7 +257,12 @@ class Extension {
     disable() {
         this._brightnessSlider.disconnect(this._brightnessListenerId);
         this._keybindingManager.destroy();
-        if (this._notifSource) this._notifSource.destroy();
+        if (this._notifSource) {
+            this._notifSource.destroy();
+            this._notifSource = null;
+        }
+        this._keybindingManager = null;
+        this.settings = null;
     }
 
     // Shamelessly stolen from https://github.com/RaphaelRochet/arch-update/blob/3d3f5927ec0d33408a802d6d38af39c1b9b6f8e5/extension.js#L473-L497
@@ -266,17 +271,14 @@ class Extension {
             // We have to prepare this only once
             this._notifSource = new MessageTray.SystemNotificationSource();
             // Take care of note leaving unneeded sources
-            this._notifSource.connect(
-                'destroy',
-                Lang.bind(this, function () {
-                    this._notifSource = null;
-                })
-            );
+            this._notifSource.connect('destroy', () => {
+                this._notifSource = null;
+            });
             Main.messageTray.add(this._notifSource);
         }
         let notification = null;
         notification = new MessageTray.Notification(this._notifSource, title, message);
-        if (btnText) notification.addAction(btnText, Lang.bind(this, btnAction));
+        if (btnText) notification.addAction(btnText, btnAction.bind(this));
         notification.setTransient(true);
         this._notifSource.showNotification(notification);
     }
