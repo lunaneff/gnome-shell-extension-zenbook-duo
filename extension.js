@@ -14,7 +14,9 @@ const utils = Me.imports.utils;
 const ScreenpadSysfsPath = '/sys/class/leds/asus::screenpad';
 
 class Extension {
-    constructor() {}
+    constructor() {
+        this._firstRun = true;
+    }
 
     enable() {
         if (this._firstRun) {
