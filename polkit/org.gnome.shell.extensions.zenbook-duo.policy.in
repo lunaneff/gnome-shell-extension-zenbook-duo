@@ -10,7 +10,7 @@
       <allow_active>yes</allow_active>
     </defaults>
     <annotate key="org.freedesktop.policykit.exec.path">{{PATH}}</annotate>
-    <annotate key="org.gnome.shell.extensions.zenbook-duo.version">3</annotate>
+    <annotate key="org.gnome.shell.extensions.zenbook-duo.version">4</annotate>
   </action>
 
 </policyconfig>
