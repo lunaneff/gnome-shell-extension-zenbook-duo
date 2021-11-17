@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # shellcheck disable=SC2034  # This is read by the installer to check if this script is up to date
-VERSION=2
+VERSION=3
 
 EXIT_SUCCESS=0
 EXIT_INVALID_ARGUMENT=1
