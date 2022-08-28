@@ -4,9 +4,10 @@
 
 | Model    | Supported? | Additional notes   | Confirmed by |
 | -------- | :--------: | ------------------ | ------------ |
-| UX481FLY |     ✅     |                    | @laurinneff  |
-| UX482EA  |     ✅     | without NVIDIA GPU | @jibsaramnim |
-| UX482EG  |     ❔     | with NVIDIA GPU    |              |
+| UX481FLY |     ✅     |                    | @laurinneff   |
+| UX482EA  |     ✅     | without NVIDIA GPU | @jibsaramnim  |
+| UX482EG  |     ❔     | with NVIDIA GPU    |               |
+| UX8402ZA |     ✅     | without NVIDIA GPU | @MarsOrBust24 |
 
 <!-- Use ✅ for supported, ❔ for unknown/unconfirmed, ❌ for unsupported -->
 
