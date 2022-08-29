@@ -25,4 +25,4 @@ make install
 
 ## Known issues
 
-- UX8402's and probably others with Intel EVO require more modern Kernels, as 5.15 will cause hourly crashes, screen flickering, sleep issues and blank screens. This module has a dependency with known issues with 5.18 and 5.19 kernels.
+- UX8402's and probably others with Intel EVO require more modern Kernels, as 5.15 will cause hourly crashes, screen flickering, sleep issues and blank screens. This extension has a kernel module dependency with known issues with 5.18 and 5.19 kernels.
