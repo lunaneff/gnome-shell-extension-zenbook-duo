@@ -4,9 +4,10 @@
 
 | Model    | Supported? | Additional notes   | Confirmed by |
 | -------- | :--------: | ------------------ | ------------ |
-| UX481FLY |     ✅     |                    | @laurinneff  |
-| UX482EA  |     ✅     | without NVIDIA GPU | @jibsaramnim |
-| UX482EG  |     ❔     | with NVIDIA GPU    |              |
+| UX481FLY |     ✅     |                    | @laurinneff   |
+| UX482EA  |     ✅     | without NVIDIA GPU | @jibsaramnim  |
+| UX482EG  |     ❔     | with NVIDIA GPU    |               |
+| UX8402ZA |     ❌     | without NVIDIA GPU | @MarsOrBust24 |
 
 <!-- Use ✅ for supported, ❔ for unknown/unconfirmed, ❌ for unsupported -->
 
@@ -21,3 +22,7 @@ git clone https://github.com/laurinneff/gnome-shell-extension-zenbook-duo.git
 cd gnome-shell-extension-zenbook-duo
 make install
 ```
+
+## Known issues
+
+- UX8402's and probably others with Intel EVO require more modern Kernels, as 5.15 will cause hourly crashes, screen flickering, sleep issues and blank screens. This extension has a kernel module dependency with known issues with 5.18 and 5.19 kernels.
