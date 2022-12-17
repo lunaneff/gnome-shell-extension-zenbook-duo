@@ -1,6 +1,7 @@
 'use strict';
 
-const Gio = imports.gi.Gio;
+const {Gio, GObject} = imports.gi;
+
 const Meta = imports.gi.Meta;
 const Shell = imports.gi.Shell;
 const Main = imports.ui.main;
@@ -8,10 +9,101 @@ const MessageTray = imports.ui.messageTray;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
+const QuickSettings = imports.ui.quickSettings;
+
 const Keybindings = Me.imports.keybindings;
 const utils = Me.imports.utils;
 
 const ScreenpadSysfsPath = '/sys/class/leds/asus::screenpad';
+
+// This is the live instance of the Quick Settings menu
+const QuickSettingsMenu = imports.ui.main.panel.statusArea.quickSettings;
+
+var brightness = 88;
+
+const FeatureSlider = GObject.registerClass(
+class FeatureSlider extends QuickSettings.QuickSlider {
+    _init() {
+        log('FeatureSlider._init');
+        
+        super._init({
+            iconName: 'night-light-symbolic',
+        });
+        
+        this._sliderChangedId = this.slider.connect('notify::value',
+            this._onSliderChanged.bind(this));
+
+        // Binding the slider to a GSettings key
+        // this._settings = brightness;
+        // Extension._setBrightness(5);
+        /*
+        this._settings = new Gio.Settings({
+            schema_id: 'org.gnome.shell.extensions.zenbook-duo',
+        });
+*/
+        this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.zenbook-duo');
+
+        this.settings.connect('changed::brightness',
+            this._onSettingsChanged.bind(this));
+
+        this._onSettingsChanged();
+        
+        // Set an accessible name for the slider
+        this.slider.accessible_name = 'Brightness';
+
+    }
+    
+    _onSettingsChanged() {
+        // Prevent the slider from emitting a change signal while being updated
+        this.slider.block_signal_handler(this._sliderChangedId);
+        this.slider.value = this.settings.get_uint('brightness') / 100.0;
+        this.slider.unblock_signal_handler(this._sliderChangedId);
+    }
+    
+    _onSliderChanged() {
+        // Assuming our GSettings holds values between 0..100, adjust for the
+        // slider taking values between 0..1
+        this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.zenbook-duo');
+        this.settings.set_uint('brightness', Math.floor(this.slider.value)*254);
+        let adjusted = Math.floor(this.slider.value*254);
+        this._setBrightness(adjusted);
+        //log('_on_SliderChanged: '+ this.settings.get_uint('brightness'));
+        // this._settings.brightness=0.5;
+    }
+
+    async _getBrightness() {
+        const ret = await utils.runScreenpadTool(false, 'get');
+        return +ret.stdout;
+    }
+
+    async _setBrightness(brightness) {
+        const ret = await utils.runScreenpadTool(true, 'set', Math.floor(brightness).toString());
+        return ret.ok;
+    }
+
+});
+
+const FeatureIndicator = GObject.registerClass(
+class FeatureIndicator extends QuickSettings.SystemIndicator {
+    _init() {
+        super._init();
+        
+        // Create the slider and associate it with the indicator, being sure to
+        // destroy it along with the indicator
+        this.quickSettingsItems.push(new FeatureSlider());
+        
+        this.connect('destroy', () => {
+            this.quickSettingsItems.forEach(item => item.destroy());
+        });
+
+        // Add the indicator to the panel
+        QuickSettingsMenu._indicators.add_child(this);
+        
+        // Add the slider to the menu, this time passing `2` as the second
+        // argument to ensure the slider spans both columns of the menu
+        QuickSettingsMenu._addItems(this.quickSettingsItems, 2);
+    }
+});
 
 class Extension {
     constructor() {
@@ -126,7 +218,7 @@ class Extension {
                     let brightness = await this._getBrightness();
                     if (brightness === 0) {
                         // Range from 1 to 255 so the screenpad can't be turned off completely by changing the brightness
-                        this._setBrightness(this._brightnessSlider.value * 254 + 1);
+                        // this._setBrightness(this._brightnessSlider.value * 254 + 1);
                     } else {
                         this._setBrightness(0);
                     }
@@ -217,20 +309,9 @@ class Extension {
             }.bind(this)
         );
 
-        this._brightnessSlider = imports.ui.main.panel.statusArea.aggregateMenu._brightness._slider;
-        this._brightnessListenerId = this._brightnessSlider.connect(
-            'notify::value',
-            async function () {
-                try {
-                    if ((await this._getBrightness()) === 0) return; // Don't turn Screenpad on when it was turned off
-
-                    // Range from 1 to 255 so the screenpad can't be turned off completely by changing the brightness
-                    await this._setBrightness(this._brightnessSlider.value * 254 + 1);
-                } catch (e) {
-                    logError(e);
-                }
-            }.bind(this)
-        );
+        // Gnome Shell 43: deprecated aggregateMenu
+        // this._brightnessSlider = imports.ui.main.panel.statusArea.aggregateMenu._brightness._slider;
+        this._brightnessListenerId = new FeatureIndicator()
 
         this.settings.connect(
             'changed::uninstall',

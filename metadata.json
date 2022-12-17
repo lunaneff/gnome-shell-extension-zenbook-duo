@@ -3,6 +3,6 @@
   "description": "Integrate the features of the Asus ZenBook Duo into GNOME",
   "uuid": "zenbook-duo@laurinneff.ch",
   "version": "5",
-  "shell-version": ["42", "41", "40"],
+  "shell-version": ["43", "42", "41", "40"],
   "url": "https://github.com/laurinneff/gnome-shell-extension-zenbook-duo"
 }
