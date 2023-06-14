@@ -7,6 +7,7 @@
 | UX481FLY |     ✅     |                    | @laurinneff  |
 | UX482EA  |     ✅     | without NVIDIA GPU | @jibsaramnim |
 | UX482EG  |     ❔     | with NVIDIA GPU    |              |
+| UX8402ZE |    ❌      | With NVIDIA GPU    | @Govind-Deshmukh|
 
 <!-- Use ✅ for supported, ❔ for unknown/unconfirmed, ❌ for unsupported -->
 
