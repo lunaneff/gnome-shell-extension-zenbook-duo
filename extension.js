@@ -46,8 +46,11 @@ class FeatureSlider extends QuickSettings.QuickSlider {
         this.settings.connect('changed::brightness',
             this._onSettingsChanged.bind(this));
 
-        this._onSettingsChanged();
-        
+        this._getBrightness().then(brightness => {
+            // init value (to be set to slider)
+            this.settings.set_uint('brightness', Math.floor(brightness / 2.55));
+        });
+
         // Set an accessible name for the slider
         this.slider.accessible_name = 'Brightness';
 
@@ -64,11 +67,11 @@ class FeatureSlider extends QuickSettings.QuickSlider {
         // Assuming our GSettings holds values between 0..100, adjust for the
         // slider taking values between 0..1
         this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.zenbook-duo');
-        this.settings.set_uint('brightness', Math.floor(this.slider.value)*254);
-        let adjusted = Math.floor(this.slider.value*254);
+        let sliderValue = this.getValue();
+        this.settings.set_uint('brightness', Math.floor(sliderValue*100.0));
+        // Range from 1 to 255 so the screenpad can't be turned off completely by changing the brightness
+        let adjusted = Math.max(Math.floor(sliderValue*255), 1);
         this._setBrightness(adjusted);
-        //log('_on_SliderChanged: '+ this.settings.get_uint('brightness'));
-        // this._settings.brightness=0.5;
     }
 
     async _getBrightness() {
@@ -81,6 +84,10 @@ class FeatureSlider extends QuickSettings.QuickSlider {
         return ret.ok;
     }
 
+    getValue() {
+        // 0.0 - 1.0
+        return this.slider.value;
+    }
 });
 
 const FeatureIndicator = GObject.registerClass(
@@ -90,7 +97,8 @@ class FeatureIndicator extends QuickSettings.SystemIndicator {
         
         // Create the slider and associate it with the indicator, being sure to
         // destroy it along with the indicator
-        this.quickSettingsItems.push(new FeatureSlider());
+        this._brightnessSlider = new FeatureSlider();
+        this.quickSettingsItems.push(this._brightnessSlider);
         
         this.connect('destroy', () => {
             this.quickSettingsItems.forEach(item => item.destroy());
@@ -102,6 +110,11 @@ class FeatureIndicator extends QuickSettings.SystemIndicator {
         // Add the slider to the menu, this time passing `2` as the second
         // argument to ensure the slider spans both columns of the menu
         QuickSettingsMenu._addItems(this.quickSettingsItems, 2);
+    }
+
+    getScreenpadSliderBrightness() {
+        // 0.0 - 1.0
+        return this._brightnessSlider.getValue();
     }
 });
 
@@ -217,8 +230,10 @@ class Extension {
                 try {
                     let brightness = await this._getBrightness();
                     if (brightness === 0) {
-                        // Range from 1 to 255 so the screenpad can't be turned off completely by changing the brightness
-                        // this._setBrightness(this._brightnessSlider.value * 254 + 1);
+                        let sliderBrightness = this._featureIndicator.getScreenpadSliderBrightness();
+                        let adjustedBrightness = Math.floor(sliderBrightness*255);
+                        // 1 to 255, so the screenpad will always turn on
+                        this._setBrightness(Math.max(adjustedBrightness, 1));
                     } else {
                         this._setBrightness(0);
                     }
@@ -309,9 +324,7 @@ class Extension {
             }.bind(this)
         );
 
-        // Gnome Shell 43: deprecated aggregateMenu
-        // this._brightnessSlider = imports.ui.main.panel.statusArea.aggregateMenu._brightness._slider;
-        this._brightnessListenerId = new FeatureIndicator()
+        this._featureIndicator = new FeatureIndicator()
 
         this.settings.connect(
             'changed::uninstall',
@@ -338,7 +351,8 @@ class Extension {
     }
 
     disable() {
-        this._brightnessSlider.disconnect(this._brightnessListenerId);
+        this._featureIndicator.destroy();
+        this._featureIndicator = null;
         this._keybindingManager.destroy();
         if (this._notifSource) {
             this._notifSource.destroy();
