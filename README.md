@@ -2,11 +2,12 @@
 
 ## Supported hardware
 
-| Model    | Supported? | Additional notes   | Confirmed by |
-| -------- | :--------: | ------------------ | ------------ |
-| UX481FLY |     ✅     |                    | @laurinneff  |
-| UX482EA  |     ✅     | without NVIDIA GPU | @jibsaramnim |
-| UX482EG  |     ❔     | with NVIDIA GPU    |              |
+| Model    | Supported? | Additional notes                           | Confirmed by |
+| -------- | :--------: | ------------------------------------------ | ------------ |
+| UX481FLY |     ✅     |                                            | @laurinneff  |
+| UX482EA  |     ✅     | without NVIDIA GPU                         | @jibsaramnim |
+| UX482EG  |     ❔     | with NVIDIA GPU                            |              |
+| UX8402   |     ✅     | without NVIDIA GPU, Ubuntu 23.04           | @allofmex    |
 
 <!-- Use ✅ for supported, ❔ for unknown/unconfirmed, ❌ for unsupported -->
 
@@ -21,3 +22,10 @@ git clone https://github.com/laurinneff/gnome-shell-extension-zenbook-duo.git
 cd gnome-shell-extension-zenbook-duo
 make install
 ```
+
+## Usage
+
+This extension will add a second brightness slider to Quicksettings (where your volume/wifi/... toggles are) to control Screenpad brightness.
+It will also add functionality to some of your Asus hardware keys like Toggle-Screenpad and MyAsus key.
+
+It will **not** link the brightness hardware keys to Screenpad display (as of now).
