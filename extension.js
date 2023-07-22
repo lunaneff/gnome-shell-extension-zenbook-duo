@@ -9,114 +9,13 @@ const MessageTray = imports.ui.messageTray;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
-const QuickSettings = imports.ui.quickSettings;
-
 const Keybindings = Me.imports.keybindings;
 const utils = Me.imports.utils;
 
+const FeatureIndicator = Me.imports.featureindicator.FeatureIndicator;
+
 const ScreenpadSysfsPath = '/sys/class/leds/asus::screenpad';
 
-// This is the live instance of the Quick Settings menu
-const QuickSettingsMenu = imports.ui.main.panel.statusArea.quickSettings;
-
-var brightness = 88;
-
-const FeatureSlider = GObject.registerClass(
-class FeatureSlider extends QuickSettings.QuickSlider {
-    _init() {
-        log('FeatureSlider._init');
-        
-        super._init({
-            iconName: 'night-light-symbolic',
-        });
-        
-        this._sliderChangedId = this.slider.connect('notify::value',
-            this._onSliderChanged.bind(this));
-
-        // Binding the slider to a GSettings key
-        // this._settings = brightness;
-        // Extension._setBrightness(5);
-        /*
-        this._settings = new Gio.Settings({
-            schema_id: 'org.gnome.shell.extensions.zenbook-duo',
-        });
-*/
-        this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.zenbook-duo');
-
-        this.settings.connect('changed::brightness',
-            this._onSettingsChanged.bind(this));
-
-        this._getBrightness().then(brightness => {
-            // init value (to be set to slider)
-            this.settings.set_uint('brightness', Math.floor(brightness / 2.55));
-        });
-
-        // Set an accessible name for the slider
-        this.slider.accessible_name = 'Brightness';
-
-    }
-    
-    _onSettingsChanged() {
-        // Prevent the slider from emitting a change signal while being updated
-        this.slider.block_signal_handler(this._sliderChangedId);
-        this.slider.value = this.settings.get_uint('brightness') / 100.0;
-        this.slider.unblock_signal_handler(this._sliderChangedId);
-    }
-    
-    _onSliderChanged() {
-        // Assuming our GSettings holds values between 0..100, adjust for the
-        // slider taking values between 0..1
-        this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.zenbook-duo');
-        let sliderValue = this.getValue();
-        this.settings.set_uint('brightness', Math.floor(sliderValue*100.0));
-        // Range from 1 to 255 so the screenpad can't be turned off completely by changing the brightness
-        let adjusted = Math.max(Math.floor(sliderValue*255), 1);
-        this._setBrightness(adjusted);
-    }
-
-    async _getBrightness() {
-        const ret = await utils.runScreenpadTool(false, 'get');
-        return +ret.stdout;
-    }
-
-    async _setBrightness(brightness) {
-        const ret = await utils.runScreenpadTool(true, 'set', Math.floor(brightness).toString());
-        return ret.ok;
-    }
-
-    getValue() {
-        // 0.0 - 1.0
-        return this.slider.value;
-    }
-});
-
-const FeatureIndicator = GObject.registerClass(
-class FeatureIndicator extends QuickSettings.SystemIndicator {
-    _init() {
-        super._init();
-        
-        // Create the slider and associate it with the indicator, being sure to
-        // destroy it along with the indicator
-        this._brightnessSlider = new FeatureSlider();
-        this.quickSettingsItems.push(this._brightnessSlider);
-        
-        this.connect('destroy', () => {
-            this.quickSettingsItems.forEach(item => item.destroy());
-        });
-
-        // Add the indicator to the panel
-        QuickSettingsMenu._indicators.add_child(this);
-        
-        // Add the slider to the menu, this time passing `2` as the second
-        // argument to ensure the slider spans both columns of the menu
-        QuickSettingsMenu._addItems(this.quickSettingsItems, 2);
-    }
-
-    getScreenpadSliderBrightness() {
-        // 0.0 - 1.0
-        return this._brightnessSlider.getValue();
-    }
-});
 
 class Extension {
     constructor() {
@@ -220,6 +119,10 @@ class Extension {
         }
 
         this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.zenbook-duo');
+        // this.settings.connect('changed::brightness',
+        //    // no usecase as of now
+        //    this._onSettingsChanged.bind(this)
+        // );
 
         this._keybindingManager = new Keybindings.Manager();
 
@@ -324,7 +227,11 @@ class Extension {
             }.bind(this)
         );
 
-        this._featureIndicator = new FeatureIndicator()
+        this._featureIndicator = new FeatureIndicator(
+            (newValue) => this._onMainScreenSliderChg(newValue),
+            (newValue) => this._onPadSliderChg(newValue),
+            () => this._onLinkedToggle()
+        );
 
         this.settings.connect(
             'changed::uninstall',
@@ -348,6 +255,19 @@ class Extension {
                 }
             }.bind(this)
         );
+
+        let isLinked = this.settings.get_boolean('link-brightness');
+        this._featureIndicator.setLinkedStatus(isLinked);
+        if (isLinked) {
+            this._featureIndicator.setScreenpadSliderValue(
+                // set slider to stored adjust-value and trigger update
+                this.settings.get_uint('brightness') / 100.0, true);
+        } else {
+            this._getBrightness().then(brightness => {
+                // set slider to screenpads real brightness
+                this._featureIndicator.setScreenpadSliderValue(brightness / 255.0, false);
+            });
+        }
     }
 
     disable() {
@@ -361,6 +281,51 @@ class Extension {
         this._keybindingManager = null;
         this.settings = null;
     }
+
+    _onMainScreenSliderChg(sliderValue) {
+        let isLinked = this.settings.get_boolean('link-brightness');
+        //log('onMainScreenSliderChg '+newValue+' isLinked:'+isLinked);
+        if (isLinked) {
+            let padSliderValue = this._featureIndicator.getScreenpadSliderBrightness();
+            // if in linked mode, screenpad slider defines a relative offset 
+            // to main brightness, while still allowing min/max brightness
+            
+            // here the calculation:
+            // slider value is 0.0 - 1.0
+            // shift to -0.5 - +0.5 via "padSliderValue - 0.5"
+            // spread range a bit for more effect (*1.7)
+            // flip positiv/negativ (*-1) that left slider position is positiv and right negative
+            // offset is now +0,85 to -0,85
+            let offset = ((padSliderValue - 0.5) * 1.7) * -1;
+            // offset+1 that original middle position results in sliderValue¹ (=no change)
+            let targetValue = Math.pow(sliderValue, (offset+1));
+            //log('main '+sliderValue.toFixed(2)+ ' offset '+offset.toFixed(2)+' new '+targetValue.toFixed(2));
+            let adjusted = Math.max(Math.floor(targetValue*255), 1);
+            this._setBrightness(adjusted);
+        }
+    }
+
+    _onPadSliderChg(newValue) {
+        let isLinked = this.settings.get_boolean('link-brightness');
+        //log('onPadSliderChg '+newValue+ ' isLinked:'+isLinked);
+        this.settings.set_uint('brightness', Math.floor(newValue*100.0));
+        if (isLinked) {
+            // recalculate screenpad brightness base on main brightness
+            this._onMainScreenSliderChg(this._featureIndicator.getMainSliderBrightness());
+        } else {
+            let adjusted = Math.max(Math.floor(newValue*255), 1);
+            this._setBrightness(adjusted);
+        }
+    }
+
+    _onLinkedToggle() {
+        let isLinked = !this.settings.get_boolean('link-brightness');
+        //log('onLinkedToggle isLinked:'+isLinked);
+        this._featureIndicator.setLinkedStatus(isLinked);
+        this.settings.set_boolean('link-brightness', isLinked);
+    }
+
+//    _onSettingsChanged() {} // unused
 
     // Shamelessly stolen from https://github.com/RaphaelRochet/arch-update/blob/3d3f5927ec0d33408a802d6d38af39c1b9b6f8e5/extension.js#L473-L497
     _showNotification(title, message, btnText, btnAction) {

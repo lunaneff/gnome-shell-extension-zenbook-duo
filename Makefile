@@ -5,6 +5,7 @@ EXTENSION_INSTALL_DIR = "$(HOME)/.local/share/gnome-shell/extensions/zenbook-duo
 FILES += extension.js
 FILES += utils.js
 FILES += keybindings.js
+FILES += featureindicator.js
 FILES += prefs.js
 FILES += prefs.ui
 FILES += metadata.json

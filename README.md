@@ -29,3 +29,14 @@ This extension will add a second brightness slider to Quicksettings (where your 
 It will also add functionality to some of your Asus hardware keys like Toggle-Screenpad and MyAsus key.
 
 It will **not** link the brightness hardware keys to Screenpad display (as of now).
+
+## Debugging
+
+Test if brightness can be set to screenpad at all
+
+```
+echo 255 > '/sys/class/leds/asus::screenpad/brightness'
+```
+
+This should have set screenpad brightness to max (or less if you replace 255 by lower value). If this is not working, check the kernel module mentioned above.
+

@@ -11,6 +11,10 @@
             <default>42</default>
             <summary>Default brightness for 2nd screen</summary>
         </key>
+        <key name="link-brightness" type="b">
+            <default>true</default>
+            <summary>Default setting if 2nd screen brightness is linked to main screen brightness</summary>
+        </key>
         <key name="myasus-cmd" type="s">
             <default>''</default>
             <summary>Command to run when the MyASUS key is pressed</summary>
