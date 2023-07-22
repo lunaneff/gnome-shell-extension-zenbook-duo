@@ -38,12 +38,14 @@ function spawnProcessCheckExitCode(...argv) {
     });
 }
 
-const EXIT_SUCCESS = 0,
-    EXIT_INVALID_ARGUMENT = 1,
-    EXIT_FAILURE = 2,
-    EXIT_NEEDS_UPDATE = 3,
-    EXIT_NOT_INSTALLED = 4,
-    EXIT_NEEDS_ROOT = 5;
+var ReturnCodes = Object.freeze({
+    EXIT_SUCCESS : 0,
+    EXIT_INVALID_ARGUMENT : 1,
+    EXIT_FAILURE : 2,
+    EXIT_NEEDS_UPDATE : 3,
+    EXIT_NOT_INSTALLED : 4,
+    EXIT_NEEDS_ROOT : 5,
+});
 
 function checkInstalled() {
     return spawnProcessCheckExitCode(

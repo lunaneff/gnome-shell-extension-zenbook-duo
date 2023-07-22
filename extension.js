@@ -11,6 +11,7 @@ const Me = ExtensionUtils.getCurrentExtension();
 
 const Keybindings = Me.imports.keybindings;
 const utils = Me.imports.utils;
+const InstallerCodes = Me.imports.utils.ReturnCodes;
 
 const FeatureIndicator = Me.imports.featureindicator.FeatureIndicator;
 
@@ -40,75 +41,7 @@ class Extension {
                     }
                 );
             } else {
-                utils.checkInstalled().then((result) => {
-                    switch (result) {
-                        case utils.EXIT_SUCCESS:
-                            // Only check for the udev rule if the additional files are installed
-                            const udevRuleFile = Gio.File.new_for_path('/etc/udev/rules.d/99-screenpad.rules');
-                            if (udevRuleFile.query_exists(null)) {
-                                this._showNotification(
-                                    'You still have the old udev rule on your system',
-                                    "This rule was previously used to get write access on the brightness file, but it isn't needed anymore.",
-                                    'Click here to see how to remove it',
-                                    function () {
-                                        Gio.AppInfo.launch_default_for_uri_async(
-                                            'https://github.com/laurinneff/gnome-shell-extension-zenbook-duo/blob/master/docs/permissions.md#removing-the-old-udev-rule',
-                                            null,
-                                            null,
-                                            null
-                                        );
-                                    }
-                                );
-                            }
-                            break;
-                        case utils.EXIT_NOT_INSTALLED:
-                            this._showNotification(
-                                'This extension requires additional configuration',
-                                "In order for this extension to work, it needs to install some files. You can undo this in the extension's settings.",
-                                'Click here to do this automatically',
-                                async function () {
-                                    switch (await utils.install()) {
-                                        case utils.EXIT_SUCCESS:
-                                            this._showNotification(
-                                                'Successfully installed files',
-                                                'The files have been installed successfully. You can now use the extension.'
-                                            );
-                                            break;
-                                        case utils.EXIT_FAILURE:
-                                            this._showNotification(
-                                                'Failed to install the files',
-                                                'The files could not be installed.'
-                                            );
-                                            break;
-                                    }
-                                }
-                            );
-                            break;
-                        case utils.EXIT_NEEDS_UPDATE:
-                            this._showNotification(
-                                'The additional files for the Screenpad+ extension requires an update',
-                                'The extension has been updated, but the additional files need to be updated separately.',
-                                'Click here to do this automatically',
-                                async function () {
-                                    switch (await utils.install()) {
-                                        case utils.EXIT_SUCCESS:
-                                            this._showNotification(
-                                                'Successfully updated files',
-                                                'The files have been files successfully. You can now use the extension.'
-                                            );
-                                            break;
-                                        case utils.EXIT_FAILURE:
-                                            this._showNotification(
-                                                'Failed to update the files',
-                                                'The files could not be updated.'
-                                            );
-                                            break;
-                                    }
-                                }
-                            );
-                            break;
-                    }
-                });
+                this._checkInstalled();
             }
 
             /*
@@ -237,14 +170,15 @@ class Extension {
             'changed::uninstall',
             async function () {
                 if (this.settings.get_boolean('uninstall')) {
+                    log('Uninstalling additional screenpad files');
                     switch (await utils.uninstall()) {
-                        case utils.EXIT_SUCCESS:
+                        case InstallerCodes.EXIT_SUCCESS:
                             this._showNotification(
                                 'Successfully uninstalled files',
                                 'The files have been uninstalled successfully. You can now remove the extension.'
                             );
                             break;
-                        case utils.EXIT_FAILURE:
+                        case InstallerCodes.EXIT_FAILURE:
                             this._showNotification(
                                 'Failed to uninstall the files',
                                 'The files could not be uninstalled.'
@@ -326,6 +260,79 @@ class Extension {
     }
 
 //    _onSettingsChanged() {} // unused
+
+    _checkInstalled() {
+        log('Checking if additional screenpad files are installed');
+        utils.checkInstalled().then((result) => {
+            switch (result) {
+                case InstallerCodes.EXIT_SUCCESS:
+                    // Only check for the udev rule if the additional files are installed
+                    const udevRuleFile = Gio.File.new_for_path('/etc/udev/rules.d/99-screenpad.rules');
+                    if (udevRuleFile.query_exists(null)) {
+                        this._showNotification(
+                            'You still have the old udev rule on your system',
+                            "This rule was previously used to get write access on the brightness file, but it isn't needed anymore.",
+                            'Click here to see how to remove it',
+                            function () {
+                                Gio.AppInfo.launch_default_for_uri_async(
+                                    'https://github.com/laurinneff/gnome-shell-extension-zenbook-duo/blob/master/docs/permissions.md#removing-the-old-udev-rule',
+                                    null,
+                                    null,
+                                    null
+                                );
+                            }
+                        );
+                    }
+                    break;
+                case InstallerCodes.EXIT_NOT_INSTALLED:
+                    this._showNotification(
+                        'This extension requires additional configuration',
+                        "In order for this extension to work, it needs to install some files. You can undo this in the extension's settings.",
+                        'Click here to do this automatically',
+                        async function () {
+                            switch (await utils.install()) {
+                                case InstallerCodes.EXIT_SUCCESS:
+                                    this._showNotification(
+                                        'Successfully installed files',
+                                        'The files have been installed successfully. You can now use the extension.'
+                                    );
+                                    break;
+                                case InstallerCodes.EXIT_FAILURE:
+                                    this._showNotification(
+                                        'Failed to install the files',
+                                        'The files could not be installed.'
+                                    );
+                                    break;
+                            }
+                        }
+                    );
+                    break;
+                case InstallerCodes.EXIT_NEEDS_UPDATE:
+                    this._showNotification(
+                        'The additional files for the Screenpad+ extension requires an update',
+                        'The extension has been updated, but the additional files need to be updated separately.',
+                        'Click here to do this automatically',
+                        async function () {
+                            switch (await utils.install()) {
+                                case InstallerCodes.EXIT_SUCCESS:
+                                    this._showNotification(
+                                        'Successfully updated files',
+                                        'The files have been files successfully. You can now use the extension.'
+                                    );
+                                    break;
+                                case InstallerCodes.EXIT_FAILURE:
+                                    this._showNotification(
+                                        'Failed to update the files',
+                                        'The files could not be updated.'
+                                    );
+                                    break;
+                            }
+                        }
+                    );
+                    break;
+            }
+        });
+    }
 
     // Shamelessly stolen from https://github.com/RaphaelRochet/arch-update/blob/3d3f5927ec0d33408a802d6d38af39c1b9b6f8e5/extension.js#L473-L497
     _showNotification(title, message, btnText, btnAction) {

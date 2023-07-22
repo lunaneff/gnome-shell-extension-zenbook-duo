@@ -49,6 +49,7 @@ function buildPrefsWidget() {
         Gio.SettingsBindFlags.DEFAULT
     );
 
+    settings.set_boolean('uninstall', false); // clear dangling flags if a previous request failed
     const button_uninstall = buildable.get_object('button_uninstall');
     button_uninstall.connect('clicked', () => {
         settings.set_boolean('uninstall', true);
