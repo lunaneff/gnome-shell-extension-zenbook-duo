@@ -92,8 +92,20 @@ function uninstall() {
 }
 
 function runScreenpadTool(pkexecNeeded, ...params) {
+    return runShellCmd(pkexecNeeded, '/usr/local/bin/screenpad-' + TOOL_SUFFIX, ...params);
+}
+
+/**
+ * Reads device product name (like 'Zenbook UX8402ZA_UX8402ZA')
+ */
+async function getProductName() {
+    const ret = await runShellCmd(false, 'cat', '/sys/devices/virtual/dmi/id/product_name');
+    return ret.ok ? ret.stdout : null;
+}
+
+function runShellCmd(pkexecNeeded, cmd, ...params) {
     return new Promise((resolve, reject) => {
-        let args = ['/usr/local/bin/screenpad-' + TOOL_SUFFIX].concat(params);
+        let args = [cmd].concat(params);
 
         if (pkexecNeeded) {
             args.unshift(PKEXEC);

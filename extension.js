@@ -132,16 +132,17 @@ class Extension {
 
         // MyASUS key
         this._keybindingManager.add(
-            'Tools',
+            'Launch1',
             function () {
                 try {
+                    let cmd = this.settings.get_string('myasus-cmd');
+                    log('Firing cmd '+cmd);
                     // The process starts running immediately after this function is called. Any
                     // error thrown here will be a result of the process failing to start, not
                     // the success or failure of the process itself.
                     let proc = Gio.Subprocess.new(
                         // The program and command options are passed as a list of arguments
-                        ['sh', '-c', this.settings.get_string('myasus-cmd')],
-
+                        ['sh', '-c', cmd],
                         // The flags control what I/O pipes are opened and how they are directed
                         Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
                     );
@@ -202,6 +203,17 @@ class Extension {
                 this._featureIndicator.setScreenpadSliderValue(brightness / 255.0, false);
             });
         }
+
+        utils.getProductName().then((productName) => {
+            log('Zenbook-Duo extension is running on '+productName);
+            // this maybe used in future for product line specific adjustmens.
+            // E.g. the original extension used keybinding key 'Tools' for MyASUS key
+            // but for UX8402 it is 'Launch1'.
+            // It is not clear if this was changed for all zenbooks, or only on 
+            // newer versions.
+        }).catch((error) => {
+            log(error);
+        });
     }
 
     disable() {
