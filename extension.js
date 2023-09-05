@@ -69,9 +69,9 @@ class Extension {
                         let sliderBrightness = this._featureIndicator.getScreenpadSliderBrightness();
                         let adjustedBrightness = Math.floor(sliderBrightness*255);
                         // 1 to 255, so the screenpad will always turn on
-                        this._setBrightness(Math.max(adjustedBrightness, 1));
+                        this._setBrightness(Math.max(adjustedBrightness, 1), true);
                     } else {
-                        this._setBrightness(0);
+                        this._setBrightness(0, true);
                     }
                 } catch (e) {
                     logError(e);
@@ -247,7 +247,7 @@ class Extension {
             let targetValue = Math.pow(sliderValue, (offset+1));
             //log('main '+sliderValue.toFixed(2)+ ' offset '+offset.toFixed(2)+' new '+targetValue.toFixed(2));
             let adjusted = Math.max(Math.floor(targetValue*255), 1);
-            this._setBrightness(adjusted);
+            this._setBrightness(adjusted, false);
         }
     }
 
@@ -260,7 +260,7 @@ class Extension {
             this._onMainScreenSliderChg(this._featureIndicator.getMainSliderBrightness());
         } else {
             let adjusted = Math.max(Math.floor(newValue*255), 1);
-            this._setBrightness(adjusted);
+            this._setBrightness(adjusted, true);
         }
     }
 
@@ -369,9 +369,17 @@ class Extension {
         return +ret.stdout;
     }
 
-    async _setBrightness(brightness) {
-        const ret = await utils.runScreenpadTool(true, 'set', Math.floor(brightness).toString());
-        return ret.ok;
+    /**
+     * @param brightness traget brightness (0-256)
+     * @param forced true to set value, even if screenpad is turned off (may turn on)
+     */
+    async _setBrightness(brightness, forced) {
+        const curr = await this._getBrightness();
+        if (forced || curr !== 0) {
+            const ret = await utils.runScreenpadTool(true, 'set', Math.floor(brightness).toString());
+            return ret.ok;
+        }
+        return true;
     }
 }
 
