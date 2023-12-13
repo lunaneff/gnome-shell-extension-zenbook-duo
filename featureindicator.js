@@ -1,8 +1,8 @@
-const {GObject} = imports.gi;
-const QuickSettings = imports.ui.quickSettings;
-// This is the live instance of the Quick Settings menu
-const QuickSettingsMenu = imports.ui.main.panel.statusArea.quickSettings;
+import GObject from 'gi://GObject';
+import * as QuickSettings from 'resource:///org/gnome/shell/ui/quickSettings.js';
+import {panel} from 'resource:///org/gnome/shell/ui/main.js';
 
+const QuickSettingsMenu = panel.statusArea.quickSettings;
 
 const FeatureSlider = GObject.registerClass(
 class FeatureSlider extends QuickSettings.QuickSlider {
@@ -49,7 +49,7 @@ class FeatureSlider extends QuickSettings.QuickSlider {
     }
 });
 
-var FeatureIndicator = GObject.registerClass(
+export const FeatureIndicator = GObject.registerClass(
 class FeatureIndicator extends QuickSettings.SystemIndicator {
     _init(onMainSliderChgCb, onPadSliderChgCb, onSliderBtnClickCb) {
         super._init();
@@ -63,12 +63,11 @@ class FeatureIndicator extends QuickSettings.SystemIndicator {
             this.quickSettingsItems.forEach(item => item.destroy());
         });
 
-        // Add the indicator to the panel
-        QuickSettingsMenu._indicators.add_child(this);
-
         // Add the slider to the menu, this time passing `2` as the second
         // argument to ensure the slider spans both columns of the menu
-        QuickSettingsMenu._addItems(this.quickSettingsItems, 2);
+        for(const item of this.quickSettingsItems) {
+            QuickSettingsMenu.menu.addItem(item, 1);
+        }
 
         this.mainBrightnessSlider = null;
         const mainBrightnessItem = this._findMainBrightnessItem();

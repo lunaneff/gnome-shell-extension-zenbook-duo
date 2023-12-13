@@ -19,14 +19,16 @@ This is a fork of [mjollnir14/gnome-shell-extension-zenbook-duo](https://github.
 ## Installation
 
 This extension requires the [asus-wmi-screenpad](https://github.com/Plippo/asus-wmi-screenpad) kernel module, please install this first.
-
-[![Get it on GNOME Extensions](https://github.com/andyholmes/gnome-shell-extensions-badge/raw/master/get-it-on-ego.png)](https://extensions.gnome.org/extension/4607/asus-zenbook-duo-integration/)
-
 ```shell
-git clone https://github.com/laurinneff/gnome-shell-extension-zenbook-duo.git
-cd gnome-shell-extension-zenbook-duo
+wget https://github.com/allofmex/gnome-shell-extension-zenbook-duo/archive/refs/tags/v7.zip -O gnome-shell-extension-zenbook-duo.zip
+unzip ./gnome-shell-extension-zenbook-duo.zip
+rm ./gnome-shell-extension-zenbook-duo.zip
+cd gnome-shell-extension-zenbook-duo-7
 make install
 ```
+
+Logout/login
+
 
 ## Usage
 

@@ -1,25 +1,22 @@
 'use strict';
+import Gio from 'gi://Gio';
+import GLib from 'gi://GLib';
 
-const {Gio, GObject} = imports.gi;
+import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as MessageTray from 'resource:///org/gnome/shell/ui/messageTray.js';
 
-const Meta = imports.gi.Meta;
-const Shell = imports.gi.Shell;
-const Main = imports.ui.main;
-const MessageTray = imports.ui.messageTray;
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-
-const Keybindings = Me.imports.keybindings;
-const utils = Me.imports.utils;
-const InstallerCodes = Me.imports.utils.ReturnCodes;
-
-const FeatureIndicator = Me.imports.featureindicator.FeatureIndicator;
+import * as Keybindings from './keybindings.js';
+import {ShellTools} from './utils.js';
+import {SetupUtils} from './utils.js';
+import {ReturnCodes as InstallerCodes} from './utils.js';
+import {FeatureIndicator} from './featureindicator.js';
 
 const ScreenpadSysfsPath = '/sys/class/leds/asus::screenpad';
 
-
-class Extension {
-    constructor() {
+export default class ZenbookDuoExtension extends Extension {
+    constructor(metadata) {
+        super(metadata);
         this._firstRun = true;
     }
 
@@ -51,7 +48,7 @@ class Extension {
             this._firstRun = false;
         }
 
-        this.settings = ExtensionUtils.getSettings('org.gnome.shell.extensions.zenbook-duo');
+        this.settings = this.getSettings('org.gnome.shell.extensions.zenbook-duo');
         // this.settings.connect('changed::brightness',
         //    // no usecase as of now
         //    this._onSettingsChanged.bind(this)
@@ -161,18 +158,31 @@ class Extension {
             }.bind(this)
         );
 
-        this._featureIndicator = new FeatureIndicator(
-            (newValue) => this._onMainScreenSliderChg(newValue),
-            (newValue) => this._onPadSliderChg(newValue),
-            () => this._onLinkedToggle()
-        );
+        if (Main.panel.statusArea.quickSettings._system) {
+            this._initQuickSettingsItems();
+        } else {
+            /*
+            * Quick settings menu is populated asynchronously 
+            * That means that the extension is initialized before built-in quick settings items are added.
+            * We need to delay our own indicator setup until built-in quick settings are available 
+            */
+            GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+                if (!Main.panel.statusArea.quickSettings._system)
+                    return GLib.SOURCE_CONTINUE;
+                this._initQuickSettingsItems();
+                return GLib.SOURCE_REMOVE;
+            });
+        }
+
+        this.utils = new ShellTools(this);
 
         this.settings.connect(
             'changed::uninstall',
             async function () {
                 if (this.settings.get_boolean('uninstall')) {
                     log('Uninstalling additional screenpad files');
-                    switch (await utils.uninstall()) {
+                    let setupUtils = new SetupUtils(this);
+                    switch (await setupUtils.uninstall()) {
                         case InstallerCodes.EXIT_SUCCESS:
                             this._showNotification(
                                 'Successfully uninstalled files',
@@ -191,20 +201,7 @@ class Extension {
             }.bind(this)
         );
 
-        let isLinked = this.settings.get_boolean('link-brightness');
-        this._featureIndicator.setLinkedStatus(isLinked);
-        if (isLinked) {
-            this._featureIndicator.setScreenpadSliderValue(
-                // set slider to stored adjust-value and trigger update
-                this.settings.get_uint('brightness') / 100.0, true);
-        } else {
-            this._getBrightness().then(brightness => {
-                // set slider to screenpads real brightness
-                this._featureIndicator.setScreenpadSliderValue(brightness / 255.0, false);
-            });
-        }
-
-        utils.getProductName().then((productName) => {
+        this.utils.getProductName().then((productName) => {
             log('Zenbook-Duo extension is running on '+productName);
             // this maybe used in future for product line specific adjustmens.
             // E.g. the original extension used keybinding key 'Tools' for MyASUS key
@@ -228,6 +225,29 @@ class Extension {
         this.settings = null;
     }
 
+    _initQuickSettingsItems() {
+        this._featureIndicator = new FeatureIndicator(
+            (newValue) => this._onMainScreenSliderChg(newValue),
+            (newValue) => this._onPadSliderChg(newValue),
+            () => this._onLinkedToggle()
+        );
+        // Add the indicator to the panel
+        Main.panel.statusArea.quickSettings.addExternalIndicator(this._featureIndicator, 2);
+
+        let isLinked = this.settings.get_boolean('link-brightness');
+        this._featureIndicator.setLinkedStatus(isLinked);
+        if (isLinked) {
+            this._featureIndicator.setScreenpadSliderValue(
+                // set slider to stored adjust-value and trigger update
+                this.settings.get_uint('brightness') / 100.0, true);
+        } else {
+            this._getBrightness().then(brightness => {
+                // set slider to screenpads real brightness
+                this._featureIndicator.setScreenpadSliderValue(brightness / 255.0, false);
+            });
+        }
+     }
+
     _onMainScreenSliderChg(sliderValue) {
         let isLinked = this.settings.get_boolean('link-brightness');
         //log('onMainScreenSliderChg '+newValue+' isLinked:'+isLinked);
@@ -247,7 +267,9 @@ class Extension {
             let targetValue = Math.pow(sliderValue, (offset+1));
             //log('main '+sliderValue.toFixed(2)+ ' offset '+offset.toFixed(2)+' new '+targetValue.toFixed(2));
             let adjusted = Math.max(Math.floor(targetValue*255), 1);
-            this._setBrightness(adjusted, false);
+            this._setBrightness(adjusted, false).catch((error) => {
+                logError(e);
+            });
         }
     }
 
@@ -275,7 +297,8 @@ class Extension {
 
     _checkInstalled() {
         log('Checking if additional screenpad files are installed');
-        utils.checkInstalled().then((result) => {
+        let setupUtils = new SetupUtils(this);
+        setupUtils.checkInstalled().then((result) => {
             switch (result) {
                 case InstallerCodes.EXIT_SUCCESS:
                     // Only check for the udev rule if the additional files are installed
@@ -302,7 +325,7 @@ class Extension {
                         "In order for this extension to work, it needs to install some files. You can undo this in the extension's settings.",
                         'Click here to do this automatically',
                         async function () {
-                            switch (await utils.install()) {
+                            switch (await setupUtils.install()) {
                                 case InstallerCodes.EXIT_SUCCESS:
                                     this._showNotification(
                                         'Successfully installed files',
@@ -325,7 +348,7 @@ class Extension {
                         'The extension has been updated, but the additional files need to be updated separately.',
                         'Click here to do this automatically',
                         async function () {
-                            switch (await utils.install()) {
+                            switch (await setupUtils.install()) {
                                 case InstallerCodes.EXIT_SUCCESS:
                                     this._showNotification(
                                         'Successfully updated files',
@@ -365,7 +388,7 @@ class Extension {
     }
 
     async _getBrightness() {
-        const ret = await utils.runScreenpadTool(false, 'get');
+        const ret = await this.utils.runScreenpadTool(false, 'get');
         return +ret.stdout;
     }
 
@@ -376,7 +399,7 @@ class Extension {
     async _setBrightness(brightness, forced) {
         const curr = await this._getBrightness();
         if (forced || curr !== 0) {
-            const ret = await utils.runScreenpadTool(true, 'set', Math.floor(brightness).toString());
+            const ret = await this.utils.runScreenpadTool(true, 'set', Math.floor(brightness).toString());
             return ret.ok;
         }
         return true;
