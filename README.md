@@ -1,5 +1,10 @@
 # Asus ZenBook Duo Integration for GNOME
 
+This GNOME extension adds controlls to Quicksettings, allowing brightness change for second screen of Asus ZenBook Duo.
+
+This is a fork of [mjollnir14/gnome-shell-extension-zenbook-duo](https://github.com/mjollnir14/gnome-shell-extension-zenbook-duo) and [lunaneff/gnome-shell-extension-zenbook-duo](https://github.com/lunaneff/gnome-shell-extension-zenbook-duo), since both repositories seem to be abandoned.
+
+
 ## Supported hardware
 
 | Model    | Supported? | Additional notes                           | Confirmed by |
