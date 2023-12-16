@@ -2,11 +2,9 @@
 
 // Shamlessly stolen from https://github.com/GSConnect/gnome-shell-extension-gsconnect/blob/37994f2f12720d8adbe5c633210c930a2bbbaf67/src/shell/keybindings.js
 
-const Config = imports.misc.config;
-const Main = imports.ui.main;
-const Meta = imports.gi.Meta;
-const Shell = imports.gi.Shell;
-
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import Meta from 'gi://Meta';
+import Shell from 'gi://Shell';
 
 /**
  * Keybindings.Manager is a simple convenience class for managing keyboard
@@ -23,7 +21,7 @@ const Shell = imports.gi.Shell;
  *     https://developer.gnome.org/meta/stable/meta-MetaKeybinding.html
  *     https://gitlab.gnome.org/GNOME/gnome-shell/blob/master/js/ui/windowManager.js#L1093-1112
  */
-var Manager = class Manager {
+export const Manager = class Manager {
 
     constructor() {
         this._keybindings = new Map();
